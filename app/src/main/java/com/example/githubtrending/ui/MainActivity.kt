@@ -1,5 +1,7 @@
 package com.example.githubtrending.ui
 
+import android.arch.lifecycle.Observer
+import android.arch.lifecycle.ViewModelProviders
 import android.content.Context
 import android.os.Bundle
 import com.example.githubtrending.R
@@ -11,8 +13,10 @@ import kotlinx.android.synthetic.main.activity_main.*
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
+import android.util.Log
 import android.widget.Toast
 import com.example.githubtrending.data.model.Repo
+import com.example.githubtrending.viewmodel.RepoViewModel
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -25,7 +29,9 @@ class MainActivity : AppCompatActivity() {
     var mItemList : MutableList<Item> = arrayListOf()
 
     var mContext : Context? = null
-    var page: Int = 1
+    companion object {
+        var page: Int = 1
+    }
 
     var mLayoutManager : LinearLayoutManager? = null
 
@@ -40,42 +46,42 @@ class MainActivity : AppCompatActivity() {
         recyclerView.layoutManager = mLayoutManager
         mAdapter  = RepoItemAdapter(mItemList)
         recyclerView.adapter = mAdapter
-        supportActionBar?.title = "Git Hub Trending ..."
+        supportActionBar?.title = "Git Hub Trending"
+
+        var isViewUpdated = true
+        val model = ViewModelProviders.of(this)[RepoViewModel::class.java]
+        model.getItem().observe(this, Observer<List<Item>>{ items ->
+            mItemList.addAll(items!!)
+            mAdapter.itemList = mItemList
+            mAdapter.notifyDataSetChanged()
+            isViewUpdated = true
+        })
+        if(savedInstanceState != null)
+            recyclerView.scrollToPosition(savedInstanceState.getInt("Position"))
 
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView?, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)
                 val totalItemCount = recyclerView!!.layoutManager.itemCount
-                if (totalItemCount == lastVisibleItemPosition + 1) {
+                if (isViewUpdated && (totalItemCount == lastVisibleItemPosition + 1)) {
                     page += 1
-                    loadRepo()
+                    isViewUpdated = false
+                    model.loadItem()
                 }
             }
         })
-
-        loadRepo()
     }
 
     private val lastVisibleItemPosition: Int
         get() = mLayoutManager!!.findLastVisibleItemPosition()
 
+    override fun onStop() {
+        page = 1
+        super.onStop()
+    }
 
-    private fun loadRepo() {
-        mApiService?.getRepositories(page)?.enqueue(object : Callback<Repo> {
-            override fun onFailure(call: Call<Repo>?, t: Throwable?) {
-                Toast.makeText(mContext,"Something went wrong",Toast.LENGTH_LONG)
-            }
-
-            override fun onResponse(call: Call<Repo>?, response: Response<Repo>?) {
-                if (response != null) {
-                    if (response.isSuccessful){
-                        var repo = response.body()
-                        mItemList.addAll(repo?.items!!)
-                        mAdapter.itemList = mItemList
-                        mAdapter.notifyDataSetChanged()
-                    }
-                }
-            }
-        })
+    override fun onSaveInstanceState(outState: Bundle?) {
+        super.onSaveInstanceState(outState)
+        outState!!.putInt("Position",mLayoutManager!!.findFirstVisibleItemPosition())
     }
 }

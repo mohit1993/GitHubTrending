@@ -7,7 +7,7 @@ import retrofit2.http.Query
 
 interface APIService {
 
-    @GET("search/repositories?q=all&sort=stars&order=desc&per_page=10")
+    @GET("search/repositories?q=all&sort=stars&order=desc&per_page=30")
     fun getRepositories(@Query("page") page: Int): Call<Repo>
 
 }
