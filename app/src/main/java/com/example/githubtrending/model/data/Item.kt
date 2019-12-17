@@ -1,4 +1,4 @@
-package com.example.githubtrending.data.model
+package com.example.githubtrending.model.data
 
 
 import android.os.Parcel

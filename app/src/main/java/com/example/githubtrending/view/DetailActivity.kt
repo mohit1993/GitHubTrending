@@ -1,31 +1,27 @@
-package com.example.githubtrending.ui
+package com.example.githubtrending.view
 
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.view.MenuItem
 import com.example.githubtrending.R
-import com.example.githubtrending.data.model.Item
+import com.example.githubtrending.model.data.Item
 import com.squareup.picasso.Picasso
 import kotlinx.android.synthetic.main.detailed_item.*
 
 class DetailActivity : AppCompatActivity() {
-    var mContext : Context? = null
     var mItem : Item? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
         setContentView(R.layout.detailed_item)
-        mContext = this
+
         mItem = intent.getParcelableExtra("item")
 
         if(mItem != null){
             supportActionBar?.title = mItem?.name
-            Picasso.with(mContext).load(mItem?.owner?.avatarUrl).into(imageView)
+            Picasso.with(this).load(mItem?.owner?.avatarUrl).into(imageView)
             tittle.text = mItem?.name
             full_description.text = mItem?.description
             stars.text = mItem?.stargazersCount.toString()
@@ -36,6 +32,9 @@ class DetailActivity : AppCompatActivity() {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(mItem?.htmlUrl))
                 startActivity(intent)
             }
+
+
+            supportActionBar?.setDisplayHomeAsUpEnabled(true)
         }
     }
 

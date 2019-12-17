@@ -1,20 +1,19 @@
 package com.example.githubtrending.viewmodel
 
 import android.app.Application
+import android.arch.lifecycle.AndroidViewModel
 import android.arch.lifecycle.LiveData
 import android.arch.lifecycle.MutableLiveData
-import android.arch.lifecycle.ViewModel
-import android.util.Log
 import android.widget.Toast
-import com.example.githubtrending.data.model.Item
-import com.example.githubtrending.data.model.Repo
-import com.example.githubtrending.remote.ApiUtils
+import com.example.githubtrending.model.data.Item
+import com.example.githubtrending.model.data.Repo
+import com.example.githubtrending.model.remote.APIClient
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 
-class RepoViewModel : ViewModel() {
-    private var page = 0
+class RepoViewModel(application: Application) : AndroidViewModel(application) {
+    private var page = 1
     private val itemList = ArrayList<Item>()
     private val item: MutableLiveData<List<Item>> by lazy {
         MutableLiveData<List<Item>>().also {
@@ -32,18 +31,19 @@ class RepoViewModel : ViewModel() {
     }
 
     fun loadItem() {
-        page++
-        ApiUtils.apiService?.getRepositories(page)?.enqueue(object : Callback<Repo> {
+        APIClient.apiService?.getRepositories(page)?.enqueue(object : Callback<Repo> {
             override fun onFailure(call: Call<Repo>?, t: Throwable?) {
-                Log.d("Mohit", "Failure")
+                Toast.makeText(getApplication(),
+                    "Network Failure! We will Try again when network available",Toast.LENGTH_LONG)
+                    .show()
+
             }
 
             override fun onResponse(call: Call<Repo>?, response: Response<Repo>?) {
-                Log.d("Mohit", "Success")
                 if (response != null) {
                     if (response.isSuccessful){
+                        page++
                         var repo = response.body()
-                        //item.setValue(repo?.items!!)
                         addItems(repo?.items!!)
                     }
                 }

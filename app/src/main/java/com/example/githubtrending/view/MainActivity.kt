@@ -1,49 +1,38 @@
-package com.example.githubtrending.ui
+package com.example.githubtrending.view
 
 import android.arch.lifecycle.Observer
 import android.arch.lifecycle.ViewModelProviders
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.net.ConnectivityManager
+import android.net.NetworkInfo
 import android.os.Bundle
 import com.example.githubtrending.R
-import com.example.githubtrending.data.model.Item
-import com.example.githubtrending.data.adapter.RepoItemAdapter
-import com.example.githubtrending.remote.APIService
-import com.example.githubtrending.remote.ApiUtils
+import com.example.githubtrending.model.data.Item
+import com.example.githubtrending.view.adapter.RepoItemAdapter
 import kotlinx.android.synthetic.main.activity_main.*
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
-import android.util.Log
-import android.widget.Toast
-import com.example.githubtrending.data.model.Repo
+import android.view.View
 import com.example.githubtrending.viewmodel.RepoViewModel
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
 
 
 class MainActivity : AppCompatActivity() {
 
     lateinit var mAdapter : RepoItemAdapter
-    private var mApiService : APIService? =null
-    var mItemList : MutableList<Item> = arrayListOf()
-
-    var mContext : Context? = null
-//    companion object {
-//        var page: Int = 1
-//    }
-
     var mLayoutManager : LinearLayoutManager? = null
+    var mNetworkReceiver : BroadcastReceiver? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        mContext = this
-        mApiService = ApiUtils.apiService
-
-        mLayoutManager = LinearLayoutManager(mContext)
+        mLayoutManager = LinearLayoutManager(this)
         recyclerView.layoutManager = mLayoutManager
+
         val model = ViewModelProviders.of(this)[RepoViewModel::class.java]
         if(model.getItem().value != null) {
             mAdapter = RepoItemAdapter(model.getItem().value as MutableList<Item>)
@@ -51,45 +40,70 @@ class MainActivity : AppCompatActivity() {
             mAdapter = RepoItemAdapter(arrayListOf())
         }
         recyclerView.adapter = mAdapter
-        supportActionBar?.title = "Git Hub Trending"
-        //var startPos : Int = -1
+
         var isViewUpdated = true
+
+        //updating view
         model.getItem().observe(this, Observer<List<Item>>{ items ->
-            //mItemList.addAll(items!!)
-            //startPos = mLayoutManager!!.findFirstVisibleItemPosition()
-            //mAdapter  = RepoItemAdapter(items as MutableList<Item>)
-            //recyclerView.adapter = mAdapter
             mAdapter.itemList = items as MutableList<Item>
+            progress_circular.visibility = View.GONE
+            init_progress.visibility = View.GONE
+            recyclerView.setPadding(0,0,0,0)
             mAdapter.notifyDataSetChanged()
-            //recyclerView.scrollToPosition(startPos)
             isViewUpdated = true
         })
-        if(savedInstanceState != null)
-            recyclerView.scrollToPosition(savedInstanceState.getInt("Position"))
 
+        //requesting new bundle with Retrofit
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView?, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)
                 val totalItemCount = recyclerView!!.layoutManager.itemCount
                 if (isViewUpdated && (totalItemCount == lastVisibleItemPosition + 1)) {
-                    //page += 1
                     isViewUpdated = false
+                    recyclerView.setPadding(0,0,0,200)
+                    progress_circular.visibility = View.VISIBLE
                     model.loadItem()
                 }
             }
         })
+
+
+        //update if network connection restore
+        mNetworkReceiver = object : BroadcastReceiver(){
+            override fun onReceive(p0: Context, p1: Intent) {
+                if(p1.extras != null) {
+                    val ni = p1.extras.get(ConnectivityManager.EXTRA_NETWORK_INFO) as NetworkInfo
+                    if(ni != null && ni.state == NetworkInfo.State.CONNECTED) {
+                        model.loadItem()
+                    }
+                }
+            }
+        }
+
+        //restore previous configuration position
+        if(savedInstanceState != null)
+            recyclerView.scrollToPosition(savedInstanceState.getInt("Position"))
+
+        supportActionBar?.title = "Git Hub Trending"
     }
 
     private val lastVisibleItemPosition: Int
         get() = mLayoutManager!!.findLastVisibleItemPosition()
 
-    override fun onStop() {
-        //page = 1
-        super.onStop()
-    }
-
     override fun onSaveInstanceState(outState: Bundle?) {
         super.onSaveInstanceState(outState)
         outState!!.putInt("Position",mLayoutManager!!.findFirstVisibleItemPosition())
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        val intentFilter = IntentFilter("android.net.conn.CONNECTIVITY_CHANGE")
+        this.registerReceiver(mNetworkReceiver,intentFilter)
+     }
+
+    override fun onPause() {
+        super.onPause()
+        this.unregisterReceiver(mNetworkReceiver)
     }
 }

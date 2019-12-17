@@ -1,9 +1,9 @@
-package com.example.githubtrending.remote
+package com.example.githubtrending.model.remote
 
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-object ApiUtils {
+object APIClient {
 
     private const val BASE_URL = "https://api.github.com/"
     private var retrofit: Retrofit? = null
