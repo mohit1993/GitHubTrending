@@ -29,9 +29,9 @@ class MainActivity : AppCompatActivity() {
     var mItemList : MutableList<Item> = arrayListOf()
 
     var mContext : Context? = null
-    companion object {
-        var page: Int = 1
-    }
+//    companion object {
+//        var page: Int = 1
+//    }
 
     var mLayoutManager : LinearLayoutManager? = null
 
@@ -44,16 +44,24 @@ class MainActivity : AppCompatActivity() {
 
         mLayoutManager = LinearLayoutManager(mContext)
         recyclerView.layoutManager = mLayoutManager
-        mAdapter  = RepoItemAdapter(mItemList)
+        val model = ViewModelProviders.of(this)[RepoViewModel::class.java]
+        if(model.getItem().value != null) {
+            mAdapter = RepoItemAdapter(model.getItem().value as MutableList<Item>)
+        } else {
+            mAdapter = RepoItemAdapter(arrayListOf())
+        }
         recyclerView.adapter = mAdapter
         supportActionBar?.title = "Git Hub Trending"
-
+        //var startPos : Int = -1
         var isViewUpdated = true
-        val model = ViewModelProviders.of(this)[RepoViewModel::class.java]
         model.getItem().observe(this, Observer<List<Item>>{ items ->
-            mItemList.addAll(items!!)
-            mAdapter.itemList = mItemList
+            //mItemList.addAll(items!!)
+            //startPos = mLayoutManager!!.findFirstVisibleItemPosition()
+            //mAdapter  = RepoItemAdapter(items as MutableList<Item>)
+            //recyclerView.adapter = mAdapter
+            mAdapter.itemList = items as MutableList<Item>
             mAdapter.notifyDataSetChanged()
+            //recyclerView.scrollToPosition(startPos)
             isViewUpdated = true
         })
         if(savedInstanceState != null)
@@ -64,7 +72,7 @@ class MainActivity : AppCompatActivity() {
                 super.onScrollStateChanged(recyclerView, newState)
                 val totalItemCount = recyclerView!!.layoutManager.itemCount
                 if (isViewUpdated && (totalItemCount == lastVisibleItemPosition + 1)) {
-                    page += 1
+                    //page += 1
                     isViewUpdated = false
                     model.loadItem()
                 }
@@ -76,7 +84,7 @@ class MainActivity : AppCompatActivity() {
         get() = mLayoutManager!!.findLastVisibleItemPosition()
 
     override fun onStop() {
-        page = 1
+        //page = 1
         super.onStop()
     }
 
